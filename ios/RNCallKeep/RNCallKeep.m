@@ -27,6 +27,10 @@ static NSString *const RNCallKeepDidPerformSetMutedCallAction = @"RNCallKeepDidP
 static NSString *const RNCallKeepPerformPlayDTMFCallAction = @"RNCallKeepDidPerformDTMFAction";
 static NSString *const RNCallKeepDidToggleHoldAction = @"RNCallKeepDidToggleHoldAction";
 
+@interface RNCallKeep ()
+@property (nonatomic, strong) CXAnswerCallAction *answerCallAction;
+@end
+
 @implementation RNCallKeep
 {
     NSMutableDictionary *_settings;
@@ -144,6 +148,12 @@ RCT_EXPORT_METHOD(displayIncomingCall:(NSString *)uuidString
             }
         }
     }];
+}
+
+RCT_EXPORT_METHOD(fulfillAnswerCallAction) {
+    if (self.answerCallAction) {
+        [self.answerCallAction fulfillWithDateConnected:[NSDate new]];
+    }
 }
 
 RCT_EXPORT_METHOD(startCall:(NSString *)uuidString
@@ -420,6 +430,7 @@ continueUserActivity:(NSUserActivity *)userActivity
 #ifdef DEBUG
     NSLog(@"[RNCallKeep][providerDidReset]");
 #endif
+    self.answerCallAction = nil;
 }
 
 // Starting outgoing call
@@ -444,7 +455,7 @@ continueUserActivity:(NSUserActivity *)userActivity
     }
     NSString *callUUID = [self containsLowerCaseLetter:action.callUUID.UUIDString] ? action.callUUID.UUIDString : [action.callUUID.UUIDString lowercaseString];
     [self sendEventWithName:RNCallKeepPerformAnswerCallAction body:@{ @"callUUID": callUUID }];
-    [action fulfill];
+    self.answerCallAction = action;
 }
 
 // Ending incoming call
@@ -456,6 +467,7 @@ continueUserActivity:(NSUserActivity *)userActivity
     NSString *callUUID = [self containsLowerCaseLetter:action.callUUID.UUIDString] ? action.callUUID.UUIDString : [action.callUUID.UUIDString lowercaseString];
     [self sendEventWithName:RNCallKeepPerformEndCallAction body:@{ @"callUUID": callUUID }];
     [action fulfill];
+    self.answerCallAction = nil;
 }
 
 -(void)provider:(CXProvider *)provider performSetHeldCallAction:(CXSetHeldCallAction *)action
@@ -483,6 +495,7 @@ continueUserActivity:(NSUserActivity *)userActivity
 #ifdef DEBUG
     NSLog(@"[RNCallKeep][CXProviderDelegate][provider:timedOutPerformingAction]");
 #endif
+    self.answerCallAction = nil;
 }
 
 - (void)provider:(CXProvider *)provider didActivateAudioSession:(AVAudioSession *)audioSession
