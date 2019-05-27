@@ -14,6 +14,7 @@
 #import <React/RCTUtils.h>
 
 #import <AVFoundation/AVAudioSession.h>
+#import <AVFoundation/AVFoundation.h>
 
 static int const DelayInSeconds = 3;
 
