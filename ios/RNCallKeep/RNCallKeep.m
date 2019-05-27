@@ -83,6 +83,30 @@ RCT_EXPORT_MODULE()
              ];
 }
 
+- (void)checkCameraPermissions:(void(^)(BOOL granted))callback
+{
+    AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+    if (status == AVAuthorizationStatusAuthorized) {
+        callback(YES);
+        return;
+    } else if (status == AVAuthorizationStatusNotDetermined){
+        [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted) {
+            callback(granted);
+            return;
+        }];
+    } else {
+        callback(NO);
+    }
+}
+
+RCT_EXPORT_METHOD(getAuthorizationStatusForVideo:(RCTResponseSenderBlock)callback)
+{
+    [self checkCameraPermissions:^(BOOL granted) {
+        NSNumber *nuberGranted = [NSNumber  numberWithBool:granted];
+        callback(@[[NSNull null], nuberGranted]);
+    }];
+}
+
 RCT_EXPORT_METHOD(setup:(NSDictionary *)options)
 {
 #ifdef DEBUG
