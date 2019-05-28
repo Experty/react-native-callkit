@@ -90,11 +90,6 @@ RCT_EXPORT_MODULE()
     if (status == AVAuthorizationStatusAuthorized) {
         callback(YES);
         return;
-    } else if (status == AVAuthorizationStatusNotDetermined){
-        [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted) {
-            callback(granted);
-            return;
-        }];
     } else {
         callback(NO);
     }
