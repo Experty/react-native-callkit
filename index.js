@@ -59,12 +59,6 @@ class RNCallKeep {
     RNCallKeepModule.displayIncomingCall(uuid, handle, handleType, hasVideo, localizedCallerName);
   };
 
-  fulfillAnswerCallAction = () => {
-    if (isIOS) {
-      RNCallKeepModule.fulfillAnswerCallAction();
-    }
-  }
-
   startCall = (uuid, handle, handleType = 'number', hasVideo = false, contactIdentifier) => {
     if (!isIOS) {
       RNCallKeepModule.startCall(handle, contactIdentifier);
