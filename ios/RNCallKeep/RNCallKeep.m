@@ -14,6 +14,7 @@
 #import <React/RCTUtils.h>
 
 #import <AVFoundation/AVAudioSession.h>
+#import <AVFoundation/AVFoundation.h>
 
 static int const DelayInSeconds = 3;
 
@@ -81,6 +82,25 @@ RCT_EXPORT_MODULE()
              RNCallKeepPerformPlayDTMFCallAction,
              RNCallKeepDidToggleHoldAction
              ];
+}
+
+- (void)checkCameraPermissions:(void(^)(BOOL granted))callback
+{
+    AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+    if (status == AVAuthorizationStatusAuthorized) {
+        callback(YES);
+        return;
+    } else {
+        callback(NO);
+    }
+}
+
+RCT_EXPORT_METHOD(getAuthorizationStatusForVideo:(RCTResponseSenderBlock)callback)
+{
+    [self checkCameraPermissions:^(BOOL granted) {
+        NSNumber *nuberGranted = [NSNumber  numberWithBool:granted];
+        callback(@[[NSNull null], nuberGranted]);
+    }];
 }
 
 RCT_EXPORT_METHOD(setup:(NSDictionary *)options)

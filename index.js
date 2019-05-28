@@ -19,6 +19,11 @@ class RNCallKeep {
     this._callkitEventHandlers.set(handler, listener);
   };
 
+  getAuthorizationStatusForVideo = (callback) => {
+    RNCallKeepModule.getAuthorizationStatusForVideo(callback);
+    return;
+  }
+
   removeEventListener = (type, handler) => {
     const listener = this._callkitEventHandlers.get(handler);
     if (!listener) {
