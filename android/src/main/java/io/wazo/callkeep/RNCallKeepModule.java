@@ -27,6 +27,7 @@ import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.util.Log;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -49,7 +50,7 @@ import com.facebook.react.modules.core.DeviceEventManagerModule.RCTDeviceEventEm
 
 // @see https://github.com/kbagchiGWC/voice-quickstart-android/blob/9a2aff7fbe0d0a5ae9457b48e9ad408740dfb968/exampleConnectionService/src/main/java/com/twilio/voice/examples/connectionservice/VoiceConnectionServiceActivity.java
 public class RNCallKeepModule extends ReactContextBaseJavaModule {
-    public static final int REQUEST_READ_PHONE_STATE = 394858;
+    public static final int REQUEST_READ_PHONE_STATE = 1337;
     public static final int REQUEST_REGISTER_CALL_PROVIDER = 394859;
 
     public static final String CHECKING_PERMS = "CHECKING_PERMS";
@@ -68,6 +69,7 @@ public class RNCallKeepModule extends ReactContextBaseJavaModule {
     private static final String REACT_NATIVE_MODULE_NAME = "RNCallKeep";
     private static final String[] permissions = { Manifest.permission.READ_PHONE_STATE, Manifest.permission.CALL_PHONE };
 
+    private static final String TAG = "RNCallKeepModule";
     private static TelecomManager telecomManager;
     private static Promise hasPhoneAccountPromise;
     private ReactApplicationContext reactContext;
@@ -110,6 +112,8 @@ public class RNCallKeepModule extends ReactContextBaseJavaModule {
             return;
         }
 
+        Log.d(TAG, "displayIncomingCall number: " + number + ", callerName: " + callerName);
+
         Bundle extras = new Bundle();
         Uri uri = Uri.fromParts(PhoneAccount.SCHEME_TEL, number, null);
 
@@ -121,9 +125,11 @@ public class RNCallKeepModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void startCall(String number, String callerName) {
-        if (!isConnectionServiceAvailable() || !hasPhoneAccount() || !hasPermissions()) {
+        if (!isConnectionServiceAvailable() || !hasPhoneAccount() || !hasPermissions() || number == null) {
             return;
         }
+
+        Log.d(TAG, "startCall number: " + number + ", callerName: " + callerName);
 
         Bundle extras = new Bundle();
         Uri uri = Uri.fromParts(PhoneAccount.SCHEME_TEL, number, null);
@@ -139,6 +145,7 @@ public class RNCallKeepModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void endCall() {
+        Log.d(TAG, "endCall called");
         if (!isConnectionServiceAvailable() || !hasPhoneAccount()) {
             return;
         }
@@ -151,6 +158,8 @@ public class RNCallKeepModule extends ReactContextBaseJavaModule {
         conn.setDisconnected(new DisconnectCause(DisconnectCause.LOCAL));
         conn.destroy();
         VoiceConnectionService.deinitConnection();
+
+        Log.d(TAG, "endCall executed");
     }
 
     @ReactMethod
@@ -174,6 +183,21 @@ public class RNCallKeepModule extends ReactContextBaseJavaModule {
         }
 
         promise.resolve(hasPhoneAccount());
+    }
+
+    @ReactMethod
+    public void checkDefaultPhoneAccount(Promise promise) {
+        if (!isConnectionServiceAvailable() || !hasPhoneAccount()) {
+            promise.resolve(true);
+            return;
+        }
+
+        if (!Build.MANUFACTURER.equalsIgnoreCase("Samsung")) {
+            promise.resolve(true);
+            return;
+        }
+
+        promise.resolve(telecomManager.getDefaultOutgoingPhoneAccount("tel") != null);
     }
 
     @ReactMethod
@@ -217,6 +241,15 @@ public class RNCallKeepModule extends ReactContextBaseJavaModule {
             return;
         }
 
+        openPhoneAccountSettings();
+    }
+
+    @ReactMethod
+    public void openPhoneAccountSettings() {
+        if (!isConnectionServiceAvailable()) {
+            return;
+        }
+
         Intent intent = new Intent(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
         this.getAppContext().startActivity(intent);
@@ -226,6 +259,18 @@ public class RNCallKeepModule extends ReactContextBaseJavaModule {
     public static Boolean isConnectionServiceAvailable() {
         // PhoneAccount is available since api level 23
         return Build.VERSION.SDK_INT >= 23;
+    }
+
+    @ReactMethod
+    public void backToForeground() {
+        Context context = getAppContext();
+        String packageName = context.getApplicationContext().getPackageName();
+        Intent focusIntent = context.getPackageManager().getLaunchIntentForPackage(packageName).cloneFilter();
+
+        focusIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+
+        Activity activity = getCurrentActivity();
+        activity.startActivity(focusIntent);
     }
 
     private void registerPhoneAccount(Context appContext) {

@@ -50,6 +50,14 @@ class RNCallKeep {
     return this._setupIOS(options.ios);
   };
 
+  hasDefaultPhoneAccount = async (options) => {
+    if (!isIOS) {
+      return this._hasDefaultPhoneAccount(options);
+    }
+
+    return;
+  };
+
   displayIncomingCall = (uuid, handle, localizedCallerName, handleType = 'number', hasVideo = false) => {
     if (!isIOS) {
       RNCallKeepModule.displayIncomingCall(handle, localizedCallerName);
@@ -95,12 +103,12 @@ class RNCallKeep {
   };
 
   checkIfBusy = () =>
-    Platform.OS === 'ios'
+    isIOS
       ? RNCallKeepModule.checkIfBusy()
       : Promise.reject('RNCallKeep.checkIfBusy was called from unsupported OS');
 
   checkSpeaker = () =>
-    Platform.OS === 'ios'
+    isIOS
       ? RNCallKeepModule.checkSpeaker()
       : Promise.reject('RNCallKeep.checkSpeaker was called from unsupported OS');
 
@@ -121,6 +129,11 @@ class RNCallKeep {
     RNCallKeepModule.setCurrentCallActive();
   };
 
+  reportUpdatedCall = (uuid, localizedCallerName) =>
+    isIOS
+      ? RNCallKeepModule.reportUpdatedCall(uuid, localizedCallerName)
+      : Promise.reject('RNCallKeep.reportUpdatedCall was called from unsupported OS');
+
   _setupIOS = async (options) => new Promise((resolve, reject) => {
     if (!options.appName) {
       reject('RNCallKeep.setup: option "appName" is required');
@@ -134,32 +147,51 @@ class RNCallKeep {
 
   _setupAndroid = async (options) => {
     const hasAccount = await RNCallKeepModule.checkPhoneAccountPermission();
+    const shouldOpenAccounts = await this._alert(options, hasAccount);
 
-    return new Promise((resolve, reject) => {
-      if (hasAccount) {
-        return resolve();
-      }
-
-      Alert.alert(
-        options.alertTitle,
-        options.alertDescription,
-        [
-          {
-            text: options.cancelButton,
-            onPress: reject,
-            style: 'cancel',
-          },
-          { text: options.okButton,
-            onPress: () => {
-              RNCallKeepModule.openPhoneAccounts();
-              resolve();
-            }
-          },
-        ],
-        { cancelable: true },
-      );
-    });
+    if (shouldOpenAccounts) {
+      RNCallKeepModule.openPhoneAccounts();
+    }
   };
+
+  _hasDefaultPhoneAccount = async (options) => {
+    const hasDefault = await RNCallKeepModule.checkDefaultPhoneAccount();
+    const shouldOpenAccounts = await this._alert(options, hasDefault);
+
+    if (shouldOpenAccounts) {
+      RNCallKeepModule.openPhoneAccountSettings();
+    }
+  };
+
+  _alert = async (options, condition) => new Promise((resolve, reject) => {
+    if (condition) {
+      return resolve(false);
+    }
+
+    Alert.alert(
+      options.alertTitle,
+      options.alertDescription,
+      [
+        {
+          text: options.cancelButton,
+          onPress: reject,
+          style: 'cancel',
+        },
+        { text: options.okButton,
+          onPress: () => resolve(true)
+        },
+      ],
+      { cancelable: true },
+    );
+  });
+
+  backToForeground() {
+    if (isIOS) {
+      return;
+    }
+
+    NativeModules.RNCallKeep.backToForeground();
+  }
 
   /*
   static holdCall(uuid, onHold) {
